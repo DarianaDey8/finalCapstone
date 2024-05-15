@@ -1,28 +1,93 @@
-# simple task manager program for small business
+# Simple task manager program for small business
 import datetime
 import os
 
-# To register a user
-def reg_user(username):
+
+# Login to program
+def login():
+    while True:
+        action = input('''Please choose an action
+        login - to log in
+        register - to register
+        exit - to exit
+        : ''').lower()
+
+        if action == 'login':
+            username = input("Enter your username: ")
+            password = input("Enter your password: ")
+
+            if check_user_exists(username):
+                if check_password(username, password):
+                    return username
+                else:
+                    print("Incorrect password. Please try again.")
+            else:
+                print("User not found. Please try again.")
+
+        elif action == 'register':
+            while True:
+                username = input("Enter a new username: ")
+                password = input("Enter a password: ")
+
+                if check_user_exists(username):
+                    print("The username already exists. Please choose another one.")
+                else:
+                    reg_user(username, password)
+                    break
+
+        elif action == 'exit':
+            print('Goodbye!')
+            exit()
+
+        else:
+            print("Invalid choice. Please try again.")
+
+
+# Check the password
+def check_password(username, password):
     with open('user.txt', 'r') as f:
-        users = [line.split(', ')[0] for line in f.read().splitlines()]
+        lines = f.readlines()
+
+    for line in lines:
+        parts = line.strip().split(',')
+        if len(parts) == 2:
+            stored_username, stored_password = parts
+            if username == stored_username:
+                return password == stored_password
+
+    return False
+
+
+def check_user_exists(username):
+    with open('user.txt', 'r') as f:
+        # Reads only the usernames from the file
+        users = [line.strip().split(',')[0] for line in f]
+
+    return username in users
+
+
+# To register a user
+def reg_user(username, password):
+    with open('user.txt', 'r') as f:
+        users = [line.strip() for line in f]
+
     if username in users:
-        print(" The user with this name already exists. Please, choose another name")
+        print(" The user already exists. Please, choose another name")
         return False
     with open('user.txt', 'a') as f:
-        f.write(f"{username}\n")
-
-    users.append(username)  # To add new user to the file user.txt
+        f.write(f"{username},{password}\n")
     print("The user was registered successfully")
+
     return True
 
-# To add new task 
+
+# To add new task
 def add_task(username, title, description):
     # Assignment of the status "In progress" for every added task
     status = 'In progress'
 
     while True:
-        due_date = input("Enter the deadline for the task (e.g.YYYY-MM-DD):  ")
+        due_date = input("Enter the deadline for the task (e.g. YYYY-MM-DD): ")
         try:
             datetime.datetime.strptime(due_date, '%Y-%m-%d')
             break
@@ -30,13 +95,16 @@ def add_task(username, title, description):
             print("Incorrect date format. Please use the format YYYY-MM-DD")
 
     # To assign task to yourself or other user
-    assign_choice = input("Who will be in charge? (s - yourself, other - other user): ").lower()
+    assign_choice = input('''Who will be in charge?:
+    s - yourself
+    other - other user
+    : ''').lower()
 
     if assign_choice == 's':
         assigned_user = username
     else:
         with open('user.txt', 'r') as f:
-            users = [line.split(', ')[0] for line in f.read().splitlines()]
+            users = [line.strip() for line in f]
 
         print("List of registered users: ")
         for user in users:
@@ -54,46 +122,64 @@ def add_task(username, title, description):
 
     print("Task was added successfully")
 
+
 # To view all tasks
 def view_all():
     with open('tasks.txt', 'r') as f:
-        tasks = f.read().splitlines()
+        tasks = f.readlines()
 
     if not tasks:
-        print("There are no tasks to display")
+        print("There are no tasks to display.")
         return
 
-    print("All tasks: ")
-    for i, task in enumerate(tasks, start=1):
-        task_data = task.split(', ')
-        if len(task_data) == 5:
-            _, title, _, _, status = task_data
-            is_completed = status.strip() == 'Completed' 
-            print(f"{i}. {title} - {'Completed' if is_completed else 'In progress'}")
-        else:
-            print(f"{i}. Not correct format in the task file: {task}")
+    print("Tasks:")
+    print("_" * 50)
+    for task in tasks:
+        parts = task.strip().split(', ')
 
-# To view own tasks
+        if len(parts) == 5:
+            assigned_user, title, description, due_date, status = parts
+            print("Task: {}".format(title))
+            print("Description: {}".format(description))
+            print("In charge: {}".format(assigned_user))
+            print("Due date: {}".format(due_date))
+            print("Status: {}".format(status))
+            print("_" * 50)
+        else:
+            print("Incorrect format in the tasks file: {}".format(task))
+
+
 def view_mine(current_user):
     with open('tasks.txt', 'r') as f:
-        tasks = f.read().splitlines()
+        tasks = f.readlines()
 
     user_tasks = [task for task in tasks if task.split(', ')[0] == current_user]
 
     if not user_tasks:
-        print("There are no tasks to display")
+        print("There are no tasks assigned to you.")
         return
 
-    for i, task in enumerate(user_tasks):
-        _, title, _, _, status = task.split(', ')
-        print(f"{i + 1}. {title} - Status: {status}")
+    print("Your tasks:")
+    print("_" * 50)
+    for task in user_tasks:
+        parts = task.strip().split(', ')
 
-    return user_tasks
+        if len(parts) == 5:
+            _, title, description, due_date, status = parts
+            print("Task: {}".format(title))
+            print("Description: {}".format(description))
+            print("Due date: {}".format(due_date))
+            print("Status: {}".format(status))
+            print("_" * 50)
+        else:
+            print("Incorrect format in the tasks file: {}".format(task))
+
 
 # To mark a task as completed
 def mark_complete(task_index, tasks):
     task = tasks[task_index]
     _, title, description, due_date, status = task.split(', ')
+
     if status.strip() != 'Completed':
         tasks[task_index] = f"{current_user}, {title}, {description}, {due_date}, Completed"
         print("Task was registered as completed")
@@ -102,6 +188,7 @@ def mark_complete(task_index, tasks):
                 f.write(task_line + '\n')
     else:
         print("The task was already marked as completed")
+
 
 # To edit task
 def edit_task(task_index, tasks, current_user):
@@ -117,8 +204,11 @@ def edit_task(task_index, tasks, current_user):
         print("The task is not available for edit.")
         return
 
-    action = input(
-        "Choose to edit (u — for user in charge, d — for due date, m — for return to menu): ").lower()
+    action = input('''Choose to edit:
+    u — for user in charge
+    d — for due date
+    m — for return to menu
+    : ''').lower()
 
     if action == 'u':
         # Change of the user in charge
@@ -165,6 +255,7 @@ def edit_task(task_index, tasks, current_user):
     else:
         print("Not correct choice.Please try again.")
 
+
 # To generate reports
 def generate_reports():
     tasks_filename = 'tasks.txt'
@@ -196,7 +287,7 @@ def generate_reports():
         f.write(f"Tasks in progress: {incomplete_tasks}\n")
         f.write(f"Overdue tasks: {overdue_tasks}\n")
 
-        # To calculate tasks in percentage 
+        # To calculate tasks in percentage
         if total_tasks > 0:
             f.write(f"Completed tasks: {(completed_tasks / total_tasks) * 100:.2f}%\n")
             f.write(f"Tasks in progress: {(incomplete_tasks / total_tasks) * 100:.2f}%\n")
@@ -237,6 +328,7 @@ def generate_reports():
                     f.write("No overdue tasks\n")
             else:
                 f.write("No tasks in progress\n")
+
 
 # To display statistics
 def display_statistics():
@@ -294,7 +386,6 @@ def display_statistics():
 
     print("\nTeam statistics:\n")
     overdue_tasks = sum(1 for task in tasks if task.endswith(', Overdue'))
-
     in_progress_tasks = sum(1 for task in tasks if task.endswith(', In Progress'))
     completed_tasks = sum(1 for task in tasks if task.endswith(', Completed'))
 
@@ -304,75 +395,116 @@ def display_statistics():
     print(f"Completed: {completed_tasks}")
 
 # To display the menu for admin
-current_user = 'admin'
-while True:
-    if current_user:
+current_user = login()
+
+if current_user == 'admin':
+    while True:
         menu = input('''Please select one out of the options below:
-        r -  Register user
-        a -  Add task
+        r - Register user
+        a - Add task
         va - Review all tasks
         vm - Review my tasks
         gr - Generate reports
         ds - Display statistics
-        e -  To exit
-        : ''').lower()
-   # To display the menu for other users  
-    else:
-        menu = input('''Please choose out of options below:
-        r -  Register user
-        a -  Add task
-        va - Review all tasks
-        e -  To exit
+        e - To exit
         : ''').lower()
 
-    if menu == 'r':
-        username = input("Enter a new user name: ")
-        reg_user(username)
+        if menu == 'r':
+            username = input("Enter a new user name: ")
+            password = input("Enter a password: ")
+            reg_user(username, password)
 
-    elif menu == 'a':
-        title = input("Enter task title: ")
-        description = input("Enter task description: ")
+        elif menu == 'a':
+            title = input("Enter task title: ")
+            description = input("Enter task description: ")
+            add_task(current_user, title, description)
 
-        add_task(current_user, title, description)
+        elif menu == 'va':
+            view_all()
 
-    elif menu == 'va':
-        view_all()
+        elif menu == 'vm':
+            user_tasks = view_mine(current_user)
 
-    elif menu == 'vm':
-        user_tasks = view_mine(current_user)
+            if user_tasks:
+                task_choice = input("Choose a task number to edit (0 - to exit): ")
 
-        if user_tasks:
-            task_choice = input("Enter a number of the task to edit (0 - return to menu): ")
+                if task_choice.isdigit():
+                    task_choice = int(task_choice)
 
-            if task_choice.isdigit():
-                task_choice = int(task_choice)
-                if 0 < task_choice <= len(user_tasks):
-                    task_choice -= 1
-                    action = input(
-                        "Choose an action (c - to mark as completed, e - to edit, m - return to menu): ").lower()
+                    if 0 < task_choice <= len(user_tasks):
+                        task_choice -= 1
+                        action = input('''Choose an action:
+                        c - to mark as completed
+                        e - to edit
+                        m - to exit
+                        :''').lower()
 
-                    if action == 'c':
-                        mark_complete(task_choice, user_tasks)
-                    elif action == 'e':
-                        edit_task(task_choice, user_tasks, current_user)
-                    elif action == 'm':
-                        print("You have chosen to return to menu")
+                        if action == 'c':
+                            mark_complete(task_choice, user_tasks)
+
+                        elif action == 'e':
+                            edit_task(task_choice, user_tasks, current_user)
+
+                        elif action == 'm':
+                            print("Exit to menu")
+
+                        else:
+                            print("Invalid choice")
+
+                    elif task_choice == 0:
+                        print("Exit to menu")
+
                     else:
-                        print("Not correct choice")
-                elif task_choice == 0:
-                    print("You have chosen to return to menu")
+                        print("Invalid choice")
+
                 else:
-                    print("Not correct choice")
+                    print("Invalid choice")
+
             else:
-                print("Not correct choice")
+                print("There are no tasks to display")
+
+        elif menu == 'gr':
+            generate_reports()
+
+        elif menu == 'ds':
+            display_statistics()
+
+        elif menu == 'e':
+            print('Goodbye!')
+            break
+
         else:
-            print("There are no tasks to edit")
+            print("Invalid choice. Please try again.")
 
-    elif menu == 'gr':
-        generate_reports()
+else:
+    while True:
+        menu = input('''Please choose out of options below:
+        r - Register user
+        a - Add task
+        va - Review all tasks
+        e - To exit
+        vm - Review my tasks 
+        : ''').lower()
 
-    elif menu == 'ds':
-        display_statistics()
+        if menu == 'r':
+            username = input("Enter a new user name: ")
+            password = input("Enter a password: ")
+            reg_user(username, password)
 
-    elif menu == 'e':
-        print('Goodbye!')
+        if menu == 'a':
+            title = input("Enter task title: ")
+            description = input("Enter task description: ")
+            add_task(current_user, title, description)
+
+        elif menu == 'vm':
+            user_tasks = view_mine(current_user)
+
+        elif menu == 'va':
+            view_all()
+
+        elif menu == 'e':
+            print('Goodbye!')
+            break
+
+        else:
+            print("Invalid choice. Please try again.")
